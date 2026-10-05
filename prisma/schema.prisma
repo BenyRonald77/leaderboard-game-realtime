@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id         Int          @id @default(autoincrement())
+  username   String       @unique
+  friendCode String       @unique
+  token      String       @unique
+  bestScore  Int          @default(0)
+  createdAt  DateTime     @default(now())
+  entries    ScoreEntry[]
+  sessions   GameSession[]
+  submits    SubmitLog[]
+
+  @@map("players")
+}
+
+model GameSession {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  secret     String
+  playerId   Int
+  player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  startedAt  DateTime @default(now())
+  expiresAt  DateTime
+  used       Boolean  @default(false)
+  durationMs Int      @default(30000)
+
+  @@map("game_sessions")
+}
+
+model ScoreEntry {
+  id        Int      @id @default(autoincrement())
+  playerId  Int
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  board     String
+  weekKey   String   @default("")
+  seasonId  Int
+  score     Int
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, board, weekKey, seasonId])
+  @@index([board, weekKey, seasonId, score])
+  @@map("score_entries")
+}
+
+model Season {
+  id       Int       @id @default(autoincrement())
+  label    String
+  startsAt DateTime  @default(now())
+  endsAt   DateTime?
+  active   Boolean   @default(true)
+
+  @@map("seasons")
+}
+
+model SeasonArchive {
+  id          Int      @id @default(autoincrement())
+  seasonId    Int
+  seasonLabel String
+  board       String
+  weekKey     String   @default("")
+  playerId    Int
+  username    String
+  score       Int
+  rank        Int
+  archivedAt  DateTime @default(now())
+
+  @@index([seasonId, board, weekKey, rank])
+  @@map("season_archives")
+}
+
+model Friendship {
+  id        Int      @id @default(autoincrement())
+  playerId  Int
+  friendId  Int
+  createdAt DateTime @default(now())
+
+  @@unique([playerId, friendId])
+  @@index([playerId])
+  @@map("friendships")
+}
+
+model SubmitLog {
+  id        Int      @id @default(autoincrement())
+  playerId  Int
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([playerId, createdAt])
+  @@map("submit_logs")
+}
